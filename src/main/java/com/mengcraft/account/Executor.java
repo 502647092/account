@@ -15,15 +15,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
-import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent.Result;
-import org.bukkit.event.player.PlayerCommandPreprocessEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerLoginEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.scheduler.BukkitScheduler;
 
 import com.mengcraft.account.entity.User;
@@ -58,6 +51,27 @@ public class Executor implements Listener, Runnable {
 			         .getConfig().getInt("broadcast.interval"));
 			setSource(source);
 		}
+	}
+
+	@EventHandler
+	public void handle(PlayerJoinEvent event) {
+		String userName = event.getPlayer().getName();
+		getPool().execute(() -> {
+			User user = getSource().find(User.class)
+					.where()
+					.eq("username", userName)
+					.findUnique();
+			getUserMap().put(userName, a(user));
+		});
+	}
+
+	private User a(User user) {
+		return user != null ? user : getSource().bean(User.class);
+	}
+
+	@EventHandler
+	public void handle(PlayerQuitEvent event) {
+		getUserMap().remove(event.getPlayer().getName());
 	}
 	
 	@Override

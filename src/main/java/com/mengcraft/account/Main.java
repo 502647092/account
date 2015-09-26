@@ -26,10 +26,7 @@ public class Main extends JavaPlugin {
 		}
 		source.install();
 
-		new ExecutorCore().bind(this, source);
-		if (!getConfig().getBoolean("coreMode")) {
-			new Executor().bind(this, source);
-		}
+		new Executor().bind(this, source);
 		new MetricsLite(this).start();
 
 		String[] strings = {

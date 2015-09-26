@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.mengcraft</groupId>
   <artifactId>account</artifactId>
-  <version>0.2.3</version>
+  <version>0.2.3-cauldron</version>
   <name>Auth</name>
   <dependencies>
     <dependency>
