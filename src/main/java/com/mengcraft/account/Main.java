@@ -15,14 +15,18 @@ import java.io.IOException;
 
 public class Main extends JavaPlugin {
 
+    private boolean logEvent;
+
     @Override
     public void onEnable() {
         getConfig().options().copyDefaults(true);
         saveConfig();
 
+        setLogEvent(getConfig().getBoolean("logEvent"));
+
         EbeanHandler source = EbeanManager.DEFAULT.getHandler(this);
         if (!source.isInitialized()) {
-            source.define(Event.class);
+            if (logEvent) source.define(Event.class);
             source.define(User.class);
             try {
                 source.initialize();
@@ -32,7 +36,9 @@ public class Main extends JavaPlugin {
         }
         source.install(true);
 
+
         new ExecutorCore().bind(this, source);
+
         if (getConfig().getBoolean("coreMode")) {
             getLogger().info("Entering core mode! Will not handle any auth method!");
         } else if (getConfig().getBoolean("sessionMode.enable")) {
@@ -58,6 +64,14 @@ public class Main extends JavaPlugin {
 
     public void sync(Runnable runnable) {
         getServer().getScheduler().runTask(this, runnable);
+    }
+
+    public void setLogEvent(boolean logEvent) {
+        this.logEvent = logEvent;
+    }
+
+    public boolean isLogEvent() {
+        return logEvent;
     }
 
 }

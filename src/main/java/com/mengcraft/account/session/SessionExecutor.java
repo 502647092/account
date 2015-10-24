@@ -15,6 +15,8 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 
+import static com.mengcraft.account.entity.Event.of;
+
 /**
  * Created on 15-10-23.
  */
@@ -25,7 +27,7 @@ public class SessionExecutor implements PluginMessageListener, Listener {
     private final EbeanHandler source;
 
     public SessionExecutor(Main main, EbeanHandler source) {
-        this.main   = main;
+        this.main = main;
         this.source = source;
     }
 
@@ -57,16 +59,14 @@ public class SessionExecutor implements PluginMessageListener, Listener {
     }
 
     private void success(Player player) {
-        Event event = Event.of(player, Event.LOG_SUCCESS);
-        Account.DEFAULT.getPool().execute(() -> {
-            source.insert(event);
+        if (main.isLogEvent()) Account.DEFAULT.getPool().execute(() -> {
+            source.insert(of(player, Event.LOG_SUCCESS));
         });
     }
 
     private void failing(Player player) {
-        Event event = Event.of(player, Event.LOG_FAILURE);
-        Account.DEFAULT.getPool().execute(() -> {
-            source.insert(event);
+        if (main.isLogEvent()) Account.DEFAULT.getPool().execute(() -> {
+            source.insert(of(player, Event.LOG_FAILURE));
         });
         player.kickPlayer(ChatColor.RED + "Error while check session!");
     }

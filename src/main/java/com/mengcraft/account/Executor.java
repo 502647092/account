@@ -27,6 +27,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
+import static com.mengcraft.account.entity.Event.LOG_FAILURE;
+import static com.mengcraft.account.entity.Event.LOG_SUCCESS;
+import static com.mengcraft.account.entity.Event.of;
+
 public class Executor implements Listener {
 
     private final Map stateMap = new ConcurrentHashMap();
@@ -100,7 +104,9 @@ public class Executor implements Listener {
         getTask().runTaskLater(getMain(), () -> {
             if (player.isOnline() && isLocked(player.getName())) {
                 event.getPlayer().kickPlayer(ChatColor.DARK_RED + "未登录");
-                pool.execute(() -> source.save(Event.of(player, Event.LOG_FAILURE)));
+                if (main.isLogEvent()) pool.execute(() -> {
+                    source.save(of(player, LOG_FAILURE));
+                });
             }
         }, 600);
         new MessageHandler(player).runTaskTimer(main, 0, castInterval);
@@ -222,10 +228,14 @@ public class Executor implements Listener {
             if (user != null && !user.valid() && secure.equals(vector.next())) {
                 a(user, name, secure, player.getAddress().getAddress());
                 player.sendMessage(ChatColor.GREEN + "注册成功");
-                pool.execute(() -> source.save(Event.of(player, Event.REG_SUCCESS)));
+                if (main.isLogEvent()) pool.execute(() -> {
+                    source.save(of(player, Event.REG_SUCCESS));
+                });
             } else {
                 player.sendMessage(ChatColor.DARK_RED + "注册失败");
-                pool.execute(() -> source.save(Event.of(player, Event.REG_FAILURE)));
+                if (main.isLogEvent()) pool.execute(() -> {
+                    source.save(of(player, Event.REG_FAILURE));
+                });
             }
         }
     }
@@ -236,13 +246,18 @@ public class Executor implements Listener {
             if (user != null && user.valid() && user.valid(vector.next())) {
                 getStateMap().remove(player.getName());
                 player.sendMessage(ChatColor.GREEN + "登陆成功");
-                pool.execute(() -> source.save(Event.of(player, Event.LOG_SUCCESS)));
+                if (main.isLogEvent()) pool.execute(() -> {
+                    source.save(of(player, LOG_SUCCESS));
+                });
             } else {
                 player.sendMessage(ChatColor.DARK_RED + "密码错误");
-                pool.execute(() -> source.save(Event.of(player, Event.LOG_FAILURE)));
+                if (main.isLogEvent()) pool.execute(() -> {
+                    source.save(of(player, LOG_FAILURE));
+                });
             }
         }
     }
+
 
     private void a(User user, String name, String secure, InetAddress ip) {
         SecureUtil util = SecureUtil.DEFAULT;

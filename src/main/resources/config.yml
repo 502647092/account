@@ -7,3 +7,4 @@ sessionMode:
   enable: false
   listen: 23429
 coreMode: false
+logEvent: true
