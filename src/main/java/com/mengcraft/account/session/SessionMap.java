@@ -36,4 +36,8 @@ public class SessionMap extends ConcurrentHashMap<String, Session> {
         return session == null ? null : session.isOutdated() ? null : session;
     }
 
+    public boolean has(String name) {
+        return containsKey(name);
+    }
+
 }

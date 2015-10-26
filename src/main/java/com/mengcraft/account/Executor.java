@@ -7,37 +7,47 @@ import com.mengcraft.account.lib.SecureUtil;
 import com.mengcraft.account.lib.StringUtil;
 import com.mengcraft.simpleorm.EbeanHandler;
 import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.FoodLevelChangeEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.player.*;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent.Result;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
 
-import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
-import static com.mengcraft.account.entity.Event.LOG_FAILURE;
-import static com.mengcraft.account.entity.Event.LOG_SUCCESS;
-import static com.mengcraft.account.entity.Event.of;
+import static com.mengcraft.account.entity.Event.*;
 
 public class Executor implements Listener {
 
-    private final Map stateMap = new ConcurrentHashMap();
-    private final Object object = new Object();
-
-    private final Map userMap = Account.DEFAULT.getUserMap();
+    private final Map<String, User> userMap = Account.DEFAULT.getUserMap();
     private final ExecutorService pool = Account.DEFAULT.getPool();
+
+    private final EventBlocker blocker = new EventBlocker() {
+
+        @EventHandler
+        public void handle(PlayerCommandPreprocessEvent event) {
+            if (isLocked(event.getPlayer().getUniqueId())) {
+                String[] d = StringUtil.DEF.split(event.getMessage());
+                ArrayVector<String> vector = new ArrayVector<>(d);
+                String c = vector.next();
+                if (c.equals("/l") || c.equals("/login")) {
+                    login(event.getPlayer(), vector);
+                }
+                if (c.equals("/r") || c.equals("/reg") || c.equals("/register")) {
+                    register(event.getPlayer(), vector);
+                }
+                event.setCancelled(true);
+            }
+        }
+
+    };
 
     private Main main;
     private EbeanHandler source;
@@ -52,6 +62,9 @@ public class Executor implements Listener {
             getMain().getServer()
                     .getPluginManager()
                     .registerEvents(this, main);
+            getMain().getServer()
+                    .getPluginManager()
+                    .registerEvents(blocker, main);
             setCastInterval(main.getConfig().getInt("broadcast.interval"));
             setSource(source);
         }
@@ -64,15 +77,15 @@ public class Executor implements Listener {
     private class MessageHandler extends BukkitRunnable {
 
         private final Player player;
-        private final String name;
+        private final UUID uuid;
 
         private MessageHandler(Player player) {
             this.player = player;
-            this.name = player.getName();
+            this.uuid = player.getUniqueId();
         }
 
         public void run() {
-            if (player.isOnline() && isLocked(name))
+            if (player.isOnline() && isLocked(uuid))
                 player.sendMessage(contents);
             else
                 cancel(); // Cancel if player exit or unlocked.
@@ -91,18 +104,11 @@ public class Executor implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void handle(PlayerLoginEvent event) {
-        if (event.getResult() == PlayerLoginEvent.Result.ALLOWED) {
-            getStateMap().put(event.getPlayer().getName(), object);
-        }
-    }
-
     @EventHandler
     public void handle(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         getTask().runTaskLater(getMain(), () -> {
-            if (player.isOnline() && isLocked(player.getName())) {
+            if (player.isOnline() && isLocked(player.getUniqueId())) {
                 event.getPlayer().kickPlayer(ChatColor.DARK_RED + "未登录");
                 if (main.isLogEvent()) pool.execute(() -> {
                     source.save(of(player, LOG_FAILURE));
@@ -110,82 +116,6 @@ public class Executor implements Listener {
             }
         }, 600);
         new MessageHandler(player).runTaskTimer(main, 0, castInterval);
-    }
-
-    @EventHandler
-    public void handle(PlayerMoveEvent event) {
-        if (isLocked(event.getPlayer().getName())) {
-            Location from = event.getFrom();
-            from.setPitch(event.getTo().getPitch());
-            from.setYaw(event.getTo().getYaw());
-
-            event.setTo(from);
-        }
-    }
-
-    @EventHandler
-    public void handle(PlayerInteractEvent event) {
-        if (isLocked(event.getPlayer().getName())) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void handle(PlayerDropItemEvent event) {
-        if (isLocked(event.getPlayer().getName())) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void handle(PlayerPickupItemEvent event) {
-        if (isLocked(event.getPlayer().getName())) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void handle(InventoryOpenEvent event) {
-        if (isLocked(event.getPlayer().getName())) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void handle(EntityDamageEvent event) {
-        if (a(event.getEntity())) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void handle(FoodLevelChangeEvent event) {
-        if (isLocked(event.getEntity().getName())) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void handle(AsyncPlayerChatEvent event) {
-        if (isLocked(event.getPlayer().getName())) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void handle(PlayerCommandPreprocessEvent event) {
-        if (isLocked(event.getPlayer().getName())) {
-            String[] d = StringUtil.DEF.split(event.getMessage());
-            ArrayVector<String> vector = new ArrayVector<>(d);
-            String c = vector.next();
-            if (c.equals("/l") || c.equals("/login")) {
-                login(event.getPlayer(), vector);
-            }
-            if (c.equals("/r") || c.equals("/reg") || c.equals("/register")) {
-                register(event.getPlayer(), vector);
-            }
-            event.setCancelled(true);
-        }
     }
 
     private Main getMain() {
@@ -208,10 +138,6 @@ public class Executor implements Listener {
         this.source = source;
     }
 
-    private Map<String, Object> getStateMap() {
-        return stateMap;
-    }
-
     private Map<String, User> getUserMap() {
         return userMap;
     }
@@ -226,7 +152,7 @@ public class Executor implements Listener {
             User user = getUserMap().get(name);
             String secure = vector.next();
             if (user != null && !user.valid() && secure.equals(vector.next())) {
-                a(user, name, secure, player.getAddress().getAddress());
+                a(user, name, secure, player);
                 player.sendMessage(ChatColor.GREEN + "注册成功");
                 if (main.isLogEvent()) pool.execute(() -> {
                     source.save(of(player, Event.REG_SUCCESS));
@@ -244,7 +170,7 @@ public class Executor implements Listener {
         if (vector.remain() != 0) {
             User user = getUserMap().get(player.getName());
             if (user != null && user.valid() && user.valid(vector.next())) {
-                getStateMap().remove(player.getName());
+                blocker.unlock(player.getUniqueId());
                 player.sendMessage(ChatColor.GREEN + "登陆成功");
                 if (main.isLogEvent()) pool.execute(() -> {
                     source.save(of(player, LOG_SUCCESS));
@@ -258,8 +184,7 @@ public class Executor implements Listener {
         }
     }
 
-
-    private void a(User user, String name, String secure, InetAddress ip) {
+    private void a(User user, String name, String secure, Player player) {
         SecureUtil util = SecureUtil.DEFAULT;
         String salt = util.random(3);
         try {
@@ -269,26 +194,19 @@ public class Executor implements Listener {
         }
         user.setSalt(salt);
         user.setUsername(name);
-        user.setRegip(ip.getHostAddress());
+        user.setRegip(player.getAddress().getAddress().getHostAddress());
         user.setRegdate(nowSec());
         getPool().execute(() -> getSource().save(user));
-        getStateMap().remove(name);
+
+        blocker.unlock(player.getUniqueId());
     }
 
     private int nowSec() {
-        return Long.class.cast(System.currentTimeMillis() / 1000).intValue();
+        return (int) (System.currentTimeMillis() / 1000);
     }
 
-    private boolean a(Entity entity) {
-        return entity instanceof Player && isLocked(b(entity));
-    }
-
-    private String b(Entity entity) {
-        return Player.class.cast(entity).getName();
-    }
-
-    private boolean isLocked(String name) {
-        return getStateMap().get(name) != null;
+    private boolean isLocked(UUID uuid) {
+        return blocker.isLocked(uuid);
     }
 
     private void setContents(List<String> list) {

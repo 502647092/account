@@ -1,6 +1,7 @@
 package com.mengcraft.account.session;
 
 import com.mengcraft.account.Account;
+import com.mengcraft.account.EventBlocker;
 import com.mengcraft.account.Main;
 import com.mengcraft.account.entity.Event;
 import com.mengcraft.simpleorm.EbeanHandler;
@@ -8,6 +9,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 
@@ -16,13 +18,14 @@ import java.io.DataInputStream;
 import java.io.IOException;
 
 import static com.mengcraft.account.entity.Event.of;
+import static com.mengcraft.account.session.SessionServer.CACHED_MAP;
 
 /**
  * Created on 15-10-23.
  */
 public class SessionExecutor implements PluginMessageListener, Listener {
 
-    private final SessionMap receivedMap = new SessionMap();
+    private final EventBlocker blocker = new EventBlocker();
     private final Main main;
     private final EbeanHandler source;
 
@@ -31,37 +34,43 @@ public class SessionExecutor implements PluginMessageListener, Listener {
         this.source = source;
     }
 
+    public EventBlocker getBlocker() {
+        return blocker;
+    }
+
     @Override
     public void onPluginMessageReceived(String label, Player player, byte[] buffer) {
+        main.getLogger().info("[SessionExecutor] Succeed handle a payload packet!");
         try (DataInputStream input = new DataInputStream(new ByteArrayInputStream(buffer))) {
             if (input.read() == 2) {
-                receivedMap.put(player.getName(), new Session(input.readInt(), input.readInt(), input.readInt()));
+                Session cached = CACHED_MAP.get(player.getName());
+                Session gotten = new Session(input.readInt(), input.readInt(), input.readInt());
+                if (cached != null && cached.equals(gotten)) success(player);
             }
         } catch (IOException e) {
-            main.getLogger().info("Exception when received a payload message! " + e.getMessage());
+            main.getLogger().info("[SessionExecutor] Exception when received a payload message! " + e.getMessage());
+        }
+    }
+
+    @EventHandler
+    public void handle(AsyncPlayerPreLoginEvent event) {
+        if (!CACHED_MAP.has(event.getName())) {
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, "Request a session first!");
         }
     }
 
     @EventHandler
     public void handle(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        String name = player.getName();
-
         main.sync(() -> {
-            Session cached = SessionServer.CACHED_MAP.get(name);
-            Session received = receivedMap.get(name);
-            if (cached != null && cached.equals(received)) {
-                success(player);
-            } else {
-                failing(player);
-            }
-        });
+            if (blocker.isLocked(event.getPlayer().getUniqueId())) failing(event.getPlayer());
+        }, main.getSessionWait());
     }
 
     private void success(Player player) {
         if (main.isLogEvent()) Account.DEFAULT.getPool().execute(() -> {
             source.insert(of(player, Event.LOG_SUCCESS));
         });
+        blocker.unlock(player.getUniqueId());
     }
 
     private void failing(Player player) {

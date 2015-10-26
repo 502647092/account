@@ -16,6 +16,7 @@ import java.io.IOException;
 public class Main extends JavaPlugin {
 
     private boolean logEvent;
+    private int sessionWait;
 
     @Override
     public void onEnable() {
@@ -23,6 +24,7 @@ public class Main extends JavaPlugin {
         saveConfig();
 
         setLogEvent(getConfig().getBoolean("logEvent"));
+        setSessionWait(getConfig().getInt("sessionMode.wait"));
 
         EbeanHandler source = EbeanManager.DEFAULT.getHandler(this);
         if (!source.isInitialized()) {
@@ -45,6 +47,7 @@ public class Main extends JavaPlugin {
             SessionExecutor executor = new SessionExecutor(this, source);
             getServer().getMessenger().registerIncomingPluginChannel(this, "Account", executor);
             getServer().getPluginManager().registerEvents(executor, this);
+            getServer().getPluginManager().registerEvents(executor.getBlocker(), this);
             try {
                 new SessionServer(this, getConfig().getInt("sessionMode.listen")).start();
             } catch (IOException e) {
@@ -62,8 +65,8 @@ public class Main extends JavaPlugin {
         getServer().getConsoleSender().sendMessage(strings);
     }
 
-    public void sync(Runnable runnable) {
-        getServer().getScheduler().runTask(this, runnable);
+    public void sync(Runnable runnable, int i) {
+        getServer().getScheduler().runTaskLater(this, runnable, i);
     }
 
     public void setLogEvent(boolean logEvent) {
@@ -74,4 +77,11 @@ public class Main extends JavaPlugin {
         return logEvent;
     }
 
+    public int getSessionWait() {
+        return sessionWait;
+    }
+
+    public void setSessionWait(int sessionWait) {
+        this.sessionWait = sessionWait;
+    }
 }
