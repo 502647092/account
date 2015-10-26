@@ -58,11 +58,12 @@ Id | Description
 - Z as int value
 
 ### Protocol
-Id | Description       | Format
----|-------------------|-----------
-0  | Session request.  | User, Pass
-1  | Session response. | Session
-2  | Session check.    | Session
+Id | Description       | Format     | Return
+---|-------------------|------------|--------
+0  | Session request.  | User, Pass | Session
+1  | Session response. | Session    | None
+2  | Session check.    | Session    | None
+3  | Register request. | User, Pass | Session
 
 ## License
 本插件源代码及其二进制文件以GPLv2发布，请使用者遵守该协议。

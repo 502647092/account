@@ -8,6 +8,7 @@ import com.mengcraft.simpleorm.EbeanManager;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -78,7 +79,7 @@ public class SessionClient {
                     buffer.position(cursor);
                     // Re read due to half packet.
                     client.handle();
-                } else if (response(client, handle(buffer))) {
+                } else if (response(client, handle(client))) {
                     client.main.getLogger().info("[SessionServer] Succeed valid a request!");
                 } else {
                     client.close("Close due to error request!");
@@ -120,9 +121,12 @@ public class SessionClient {
             return false;
         }
 
-        private String handle(ByteBuffer buffer) {
+        private String handle(SessionClient client) {
+            ByteBuffer buffer = client.buffer;
+
             byte id = buffer.get();
-            if (id == 0) {
+
+            if (id == 0 || id == 3) {
                 int nameSize = buffer.getInt();
                 int passSize = buffer.getInt();
 
@@ -134,18 +138,34 @@ public class SessionClient {
                 String name = new String(stringBuffer, 0, nameSize);
                 String pass = new String(stringBuffer, nameSize, passSize);
 
-                return check(name, pass) ? name : null;
+                return id == 3 ? register(client, name, pass) : check(name, pass);
             }
             return null;
         }
 
-        private boolean check(String name, String pass) {
+        private String register(SessionClient client, String name, String pass) {
+            EbeanHandler handler = EbeanManager.DEFAULT.getHandler("Account");
+            User user = handler.bean(User.class);
+            try {
+                user.setUsername(name);
+                user.setRawPassword(pass);
+                user.setRegdate((int) (System.currentTimeMillis() / 1000));
+                user.setRegip(((InetSocketAddress) client.client.getRemoteAddress()).getAddress().getHostAddress());
+                // Will throw a exception while user exists!
+                handler.insert(user);
+            } catch (Exception e) {
+                client.close("Exception handle register request! " + e.getMessage());
+            }
+            return user.valid() ? name : null;
+        }
+
+        private String check(String name, String pass) {
             EbeanHandler db = EbeanManager.DEFAULT.getHandler("Account");
             User user = db.find(User.class)
                     .where()
                     .eq("username", name)
                     .findUnique();
-            return user != null && user.valid(pass);
+            return user != null && user.valid(pass) ? name : null;
         }
 
         @Override
