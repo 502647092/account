@@ -46,6 +46,7 @@ public class SessionExecutor implements PluginMessageListener, Listener {
                 Session cached = CACHED_MAP.get(player.getName());
                 Session gotten = new Session(input.readInt(), input.readInt(), input.readInt());
                 if (cached != null && cached.equals(gotten)) success(player);
+                else failing(player);
             }
         } catch (IOException e) {
             main.getLogger().info("[SessionExecutor] Exception when received a payload message! " + e.getMessage());
