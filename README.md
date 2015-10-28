@@ -35,7 +35,7 @@
 Column | Type     | Description
 -------|----------|--------------
 id     | int      | Primary Key
-player | varchar  | Player's name
+name   | varchar  | Player's name
 ip     | varchar  | Player's ip
 type   | int      | Event Type
 time   | datetime | Event Time

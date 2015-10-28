@@ -3,7 +3,7 @@ package com.mengcraft.account.session;
 import com.mengcraft.account.Account;
 import com.mengcraft.account.EventBlocker;
 import com.mengcraft.account.Main;
-import com.mengcraft.account.entity.Event;
+import com.mengcraft.account.entity.AppAccountEvent;
 import com.mengcraft.simpleorm.EbeanHandler;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -17,7 +17,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 
-import static com.mengcraft.account.entity.Event.of;
+import static com.mengcraft.account.entity.AppAccountEvent.of;
 import static com.mengcraft.account.session.SessionServer.CACHED_MAP;
 
 /**
@@ -69,14 +69,14 @@ public class SessionExecutor implements PluginMessageListener, Listener {
 
     private void success(Player player) {
         if (main.isLogEvent()) Account.DEFAULT.getPool().execute(() -> {
-            source.insert(of(player, Event.LOG_SUCCESS));
+            source.insert(of(player, AppAccountEvent.LOG_SUCCESS));
         });
         blocker.unlock(player.getUniqueId());
     }
 
     private void failing(Player player) {
         if (main.isLogEvent()) Account.DEFAULT.getPool().execute(() -> {
-            source.insert(of(player, Event.LOG_FAILURE));
+            source.insert(of(player, AppAccountEvent.LOG_FAILURE));
         });
         player.kickPlayer(ChatColor.RED + "Error while check session!");
     }

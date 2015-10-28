@@ -6,15 +6,13 @@ import org.bukkit.entity.Player;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.Table;
 import java.sql.Timestamp;
 
 /**
  * Created by on 15-10-10.
  */
 @Entity
-@Table(name = "app_account_event")
-public class Event {
+public class AppAccountEvent {
 
     public static final int REG_SUCCESS = 0;
     public static final int REG_FAILURE = 1;
@@ -25,7 +23,7 @@ public class Event {
     private int id;
 
     @Column
-    private String player;
+    private String name;
 
     @Column
     private String ip;
@@ -44,12 +42,12 @@ public class Event {
         this.id = id;
     }
 
-    public String getPlayer() {
-        return player;
+    public String getName() {
+        return name;
     }
 
-    public void setPlayer(String player) {
-        this.player = player;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getIp() {
@@ -76,9 +74,9 @@ public class Event {
         this.time = time;
     }
 
-    public static Event of(Player player, int type) {
-        Event event = new Event();
-        event.player = player.getName();
+    public static AppAccountEvent of(Player player, int type) {
+        AppAccountEvent event = new AppAccountEvent();
+        event.name = player.getName();
         event.ip = player.getAddress().getAddress().getHostAddress();
         event.type = type;
 

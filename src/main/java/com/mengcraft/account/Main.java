@@ -1,6 +1,6 @@
 package com.mengcraft.account;
 
-import com.mengcraft.account.entity.Event;
+import com.mengcraft.account.entity.AppAccountEvent;
 import com.mengcraft.account.session.SessionExecutor;
 import com.mengcraft.account.session.SessionServer;
 import org.bukkit.ChatColor;
@@ -28,7 +28,7 @@ public class Main extends JavaPlugin {
 
         EbeanHandler source = EbeanManager.DEFAULT.getHandler(this);
         if (!source.isInitialized()) {
-            if (logEvent) source.define(Event.class);
+            if (logEvent) source.define(AppAccountEvent.class);
             source.define(User.class);
             try {
                 source.initialize();

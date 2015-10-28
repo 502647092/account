@@ -1,6 +1,6 @@
 package com.mengcraft.account;
 
-import com.mengcraft.account.entity.Event;
+import com.mengcraft.account.entity.AppAccountEvent;
 import com.mengcraft.account.entity.User;
 import com.mengcraft.account.lib.ArrayVector;
 import com.mengcraft.account.lib.SecureUtil;
@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
-import static com.mengcraft.account.entity.Event.*;
+import static com.mengcraft.account.entity.AppAccountEvent.*;
 
 public class Executor implements Listener {
 
@@ -155,12 +155,12 @@ public class Executor implements Listener {
                 a(user, name, secure, player);
                 player.sendMessage(ChatColor.GREEN + "注册成功");
                 if (main.isLogEvent()) pool.execute(() -> {
-                    source.save(of(player, Event.REG_SUCCESS));
+                    source.save(of(player, AppAccountEvent.REG_SUCCESS));
                 });
             } else {
                 player.sendMessage(ChatColor.DARK_RED + "注册失败");
                 if (main.isLogEvent()) pool.execute(() -> {
-                    source.save(of(player, Event.REG_FAILURE));
+                    source.save(of(player, AppAccountEvent.REG_FAILURE));
                 });
             }
         }
@@ -177,9 +177,6 @@ public class Executor implements Listener {
                 });
             } else {
                 player.sendMessage(ChatColor.DARK_RED + "密码错误");
-                if (main.isLogEvent()) pool.execute(() -> {
-                    source.save(of(player, LOG_FAILURE));
-                });
             }
         }
     }
